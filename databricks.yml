@@ -1,0 +1,36 @@
+# Declarative Automation Bundle for the Neo_Bank project.
+# Source of truth: this repo. Deploy with:
+#   databricks bundle validate --target dev
+#   databricks bundle deploy --target dev   (or prod)
+# See https://docs.databricks.com/dev-tools/bundles/index.html
+
+bundle:
+  name: neo_bank_project
+
+include:
+  - resources/*.yml
+
+variables:
+  warehouse_id:
+    description: SQL warehouse used by the dashboard and dashboard tasks
+    lookup:
+      warehouse: "Serverless Starter Warehouse"
+
+targets:
+  dev:
+    # Development mode: deployed resources get a '[dev <user>]' prefix
+    # and job schedules/triggers are paused.
+    mode: development
+    default: true
+    workspace:
+      host: https://dbc-43761b56-2a3d.cloud.databricks.com
+
+  prod:
+    mode: production
+    workspace:
+      host: https://dbc-43761b56-2a3d.cloud.databricks.com
+      # Deploy to a single stable location (same pattern as bakehouse_analytics).
+      root_path: /Workspace/Users/davidlearning184@gmail.com/.bundle/${bundle.name}/${bundle.target}
+    permissions:
+      - user_name: davidlearning184@gmail.com
+        level: CAN_MANAGE

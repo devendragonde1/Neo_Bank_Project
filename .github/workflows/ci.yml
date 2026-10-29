@@ -1,0 +1,67 @@
+# CI/CD for the Neo_Bank project (Declarative Automation Bundle).
+#
+# - Pull requests: validate the bundle against the prod target (catches
+#   schema, path, and reference errors before merge).
+# - Manual deploy: run this workflow from the Actions tab and pick a target
+#   (dev or prod). Nothing deploys automatically on push — by design.
+#
+# Required repository secrets (Settings → Secrets and variables → Actions):
+#   DATABRICKS_HOST   e.g. https://dbc-43761b56-2a3d.cloud.databricks.com
+#   DATABRICKS_TOKEN  a Databricks access token (ideally from a service
+#                     principal with CAN_MANAGE on the target resources).
+# More secure alternative: GitHub OIDC federation with a Databricks service
+# principal (no long-lived token stored in GitHub) — see
+# https://docs.databricks.com/dev-tools/ci-cd/ci-cd-oauth.html
+
+name: neo-bank-ci
+
+on:
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      target:
+        description: "Bundle target to deploy"
+        required: true
+        type: choice
+        default: dev
+        options:
+          - dev
+          - prod
+
+jobs:
+  validate:
+    name: Validate bundle
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install Databricks CLI
+        run: |
+          curl -fsSL https://raw.githubusercontent.com/databricks/setup-cli/main/install.sh | sh
+
+      - name: Validate bundle (prod target)
+        env:
+          DATABRICKS_HOST: ${{ secrets.DATABRICKS_HOST }}
+          DATABRICKS_TOKEN: ${{ secrets.DATABRICKS_TOKEN }}
+        run: databricks bundle validate --target prod
+
+  deploy:
+    name: Deploy bundle (manual)
+    if: github.event_name == 'workflow_dispatch'
+    needs: validate
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install Databricks CLI
+        run: |
+          curl -fsSL https://raw.githubusercontent.com/databricks/setup-cli/main/install.sh | sh
+
+      - name: Deploy bundle (${{ inputs.target }})
+        env:
+          DATABRICKS_HOST: ${{ secrets.DATABRICKS_HOST }}
+          DATABRICKS_TOKEN: ${{ secrets.DATABRICKS_TOKEN }}
+        run: databricks bundle deploy --target ${{ inputs.target }}

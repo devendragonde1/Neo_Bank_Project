@@ -1,0 +1,11 @@
+# AI/BI dashboard resource for the Neo_Bank project.
+# The .lvdash.json lives at the bundle root; datasets inside it reference
+# banking.gold tables (hardcoded), so no dataset_catalog/dataset_schema
+# overrides are needed.
+
+resources:
+  dashboards:
+    neo_bank_dashboard:
+      display_name: NeoBank_Dashboard
+      file_path: ../NeoBank_Dashboard.lvdash.json
+      warehouse_id: ${var.warehouse_id}

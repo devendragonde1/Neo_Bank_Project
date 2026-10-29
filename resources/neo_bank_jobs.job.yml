@@ -1,0 +1,139 @@
+# Job resources for the Neo_Bank project.
+# Notebook paths are relative to the bundle root (this file lives in resources/).
+# Cross-job references use ${resources.jobs.<key>.id} so the For Each / run_job
+# tasks point at the bundle-deployed jobs instead of hand-built job IDs.
+
+resources:
+  jobs:
+
+    # ── Inner job: runs 02 → 03 → 04 for ONE table ────────────────────────
+    neo_bank_source_to_silver_inner:
+      name: Neo_bank_source_to_silver_inner
+      max_concurrent_runs: 4
+      queue:
+        enabled: true
+      performance_target: PERFORMANCE_OPTIMIZED
+      parameters:
+        - name: run_id
+          default: ""
+        - name: table_metadata
+          default: ""
+      tasks:
+        - task_key: Get_list_of_parameters
+          notebook_task:
+            notebook_path: ../02_source_to_silver/02_read_table_parameters.ipynb
+            source: WORKSPACE
+        - task_key: Source_to_Bronze_ingestion
+          depends_on:
+            - task_key: Get_list_of_parameters
+          notebook_task:
+            notebook_path: ../02_source_to_silver/03_source_to_bronze.ipynb
+            source: WORKSPACE
+            base_parameters:
+              table_parameters: "{{tasks.Get_list_of_parameters.values.table_parameters}}"
+        - task_key: Bronze_to_Silver
+          depends_on:
+            - task_key: Source_to_Bronze_ingestion
+          notebook_task:
+            notebook_path: ../02_source_to_silver/04_bronze_to_silver.ipynb
+            source: WORKSPACE
+            base_parameters:
+              table_parameters: "{{tasks.Get_list_of_parameters.values.table_parameters}}"
+
+    # ── Parent job: reads table list, loops the inner job per table ────────
+    neo_bank_source_to_silver:
+      name: Neo_Bank_source_to_silver
+      max_concurrent_runs: 3
+      queue:
+        enabled: true
+      performance_target: PERFORMANCE_OPTIMIZED
+      parameters:
+        - name: run_id
+          default: "12345"
+        - name: source_system
+          default: "blob"
+      tasks:
+        - task_key: Get_list_of_tables
+          notebook_task:
+            notebook_path: ../02_source_to_silver/01_read_table_list.ipynb
+            source: WORKSPACE
+        - task_key: Ingest_Data_source_to_silver
+          depends_on:
+            - task_key: Get_list_of_tables
+          for_each_task:
+            inputs: "{{tasks.Get_list_of_tables.values.tables_metadata}}"
+            concurrency: 4
+            task:
+              task_key: Ingest_Data_source_to_silver_iteration
+              run_job_task:
+                job_id: ${resources.jobs.neo_bank_source_to_silver_inner.id}
+                job_parameters:
+                  table_metadata: "{{input}}"
+
+    # ── Silver to Gold: same pattern, drives 01_Silver_to_Gold_Driver ─────
+    neo_bank_silver_to_gold:
+      name: Neo_Bank_silver_to_gold
+      max_concurrent_runs: 3
+      queue:
+        enabled: true
+      performance_target: PERFORMANCE_OPTIMIZED
+      parameters:
+        - name: run_id
+          default: "123456"
+        - name: source_system
+          default: "silver"
+      tasks:
+        - task_key: Get_list_of_tables
+          notebook_task:
+            notebook_path: ../02_source_to_silver/01_read_table_list.ipynb
+            source: WORKSPACE
+        - task_key: Ingest_Data_source_to_silver
+          depends_on:
+            - task_key: Get_list_of_tables
+          for_each_task:
+            inputs: "{{tasks.Get_list_of_tables.values.tables_metadata}}"
+            concurrency: 4
+            task:
+              task_key: Ingest_Data_source_to_silver_iteration
+              notebook_task:
+                notebook_path: ../03_Silver_to_Gold/01_Silver_to_Gold_Driver.ipynb
+                source: WORKSPACE
+                base_parameters:
+                  table_metadata: "{{input}}"
+
+    # ── Master orchestrator: silver loads → gold → dashboard ─────────────
+    neo_bank_master:
+      name: NeoBank_Master
+      max_concurrent_runs: 1
+      queue:
+        enabled: true
+      performance_target: PERFORMANCE_OPTIMIZED
+      tasks:
+        - task_key: Source_to_silver_blob
+          run_job_task:
+            job_id: ${resources.jobs.neo_bank_source_to_silver.id}
+            job_parameters:
+              run_id: "{{job.run_id}}"
+              source_system: "blob"
+        - task_key: Source_to_silver_postgres
+          run_job_task:
+            job_id: ${resources.jobs.neo_bank_source_to_silver.id}
+            job_parameters:
+              run_id: "{{job.run_id}}"
+              source_system: "postgres"
+        - task_key: Silver_to_gold
+          depends_on:
+            - task_key: Source_to_silver_postgres
+            - task_key: Source_to_silver_blob
+          run_if: ALL_DONE
+          run_job_task:
+            job_id: ${resources.jobs.neo_bank_silver_to_gold.id}
+            job_parameters:
+              run_id: "{{job.run_id}}"
+              source_system: "silver"
+        - task_key: NeoBank_Dashboard
+          depends_on:
+            - task_key: Silver_to_gold
+          dashboard_task:
+            dashboard_id: ${resources.dashboards.neo_bank_dashboard.id}
+            warehouse_id: ${var.warehouse_id}
