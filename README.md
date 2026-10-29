@@ -54,6 +54,43 @@ A Genie agent — [Banking Performance and Risk Analytics](#genie-01f1d1202f3516
 
 Not covered: individual transaction details, loan-level breakdowns, predictive/forecast analytics, or cross-bank benchmarks.
 
+**Tables it uses** (all in `banking.gold`):
+
+| Table | Domain |
+| --- | --- |
+| `banking.gold.branch_performance` | Branch-level performance metrics (customers, accounts, deposits, transaction volumes) |
+| `banking.gold.customer_360` | Comprehensive customer view (balances, activity, credit scores, risk grades, segments) |
+| `banking.gold.daily_bank_kpi` | Daily bank-wide KPIs (customers, accounts, balances, transactions, risk) |
+| `banking.gold.risk_customer_summary` | Customers by risk grade (credit scores, external loans, overdue amounts) |
+| `banking.gold.transaction_channel_summary` | Transactions by date, gateway, and device (success/failure rates, processing times) |
+
+#### Recreating this Genie space
+
+Genie spaces are workspace objects — they cannot be exported as files or cloned from this repo. To recreate this space in another workspace (after running the pipeline so the gold tables exist):
+
+1. In the target workspace, go to **Genie** (sidebar) → **Create Genie Space**, and name it `Banking Performance and Risk Analytics`.
+2. Add the five `banking.gold` tables listed above.
+3. Paste this text into the space's description/instructions field:
+
+   ```text
+   This Agent provides comprehensive insights into banking performance, customer risk, and transaction activity by analyzing branch, customer, daily bank, risk, and channel metrics.
+
+   Capabilities:
+   - Evaluate branch-level performance including customer volume, account count, deposits, and transaction totals.
+   - Profile customers by segment, account activity, balances, credit scores, and risk grades.
+   - Track daily bank-wide KPIs such as total balance, transaction trends, credit score averages, and high-risk customer counts.
+   - Analyze customer risk by aggregating risk grades, average credit scores, loan exposure, and overdue amounts.
+   - Review transaction activity by gateway and device, including success rates and processing times.
+
+   Limitations:
+   - Does not provide individual transaction details or loan-level breakdowns.
+   - Lacks predictive analytics or forecast models for future performance.
+   - No cross-bank or external benchmark comparisons; data is limited to internal metrics.
+   ```
+
+4. Ask a test question (e.g. "Which branch has the highest deposits?") to verify the space answers correctly.
+5. Share it: users need at least **Can Run** on the Genie space and `SELECT` on the gold tables.
+
 ## How It Works (metadata-driven)
 
 ### `banking.metadata.tables`
