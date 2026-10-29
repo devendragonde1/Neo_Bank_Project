@@ -1,6 +1,6 @@
 # Neo_Bank Project
 
-An end-to-end banking analytics pipeline on Databricks that ingests data from two sources — a Neon Postgres source database ("neondbe", schema "banking") and cloud blob storage — into a medallion architecture (bronze → silver → gold) using a metadata-driven approach, and serves the results through the NeoBank_Dashboard.
+An end-to-end banking analytics pipeline on Databricks that ingests data from two sources — a Neon Postgres source database ("neondbe", schema "banking") and cloud blob storage — into a medallion architecture (bronze → silver → gold) using a metadata-driven approach, and serves the results through the NeoBank_Dashboard and a Genie agent for natural-language analytics.
 
 ## Architecture
 
@@ -9,7 +9,7 @@ Sources:
   - Neon Postgres (banking schema: customers, accounts, transactions, branches)
   - Blob storage (credit_bureau_reports, payment_gateway_logs)
         ↓
-  Bronze layer  →  Silver layer  →  Gold layer (banking.gold)  →  NeoBank_Dashboard
+  Bronze layer  →  Silver layer  →  Gold layer (banking.gold)  →  NeoBank_Dashboard + Genie Agent
 ```
 
 ## Project Structure
@@ -42,6 +42,17 @@ Silver-to-gold transformation chain. See [03_Silver_to_Gold/README.md](#file-380
 
 ### NeoBank_Dashboard.lvdash.json
 AI/BI dashboard with pages: `Executive_Dashboard`, `Customer_insights`, `Branch_Performance`, `Gateway_and_Device`.
+
+### Banking Performance and Risk Analytics (Genie Agent)
+A Genie agent — [Banking Performance and Risk Analytics](#genie-01f1d1202f351646a7c90bc79d1982c3) — for natural-language Q&A over the banking gold tables. You can ask it about:
+
+- Branch-level performance — customer volume, account count, deposits, transaction totals
+- Customer profiles — segments, account activity, balances, credit scores, risk grades
+- Daily bank-wide KPIs — total balance, transaction trends, average credit score, high-risk customer counts
+- Customer risk — risk grades, average credit scores, loan exposure, overdue amounts
+- Transaction activity by gateway and device — success rates and processing times
+
+Not covered: individual transaction details, loan-level breakdowns, predictive/forecast analytics, or cross-bank benchmarks.
 
 ## How It Works (metadata-driven)
 
@@ -99,3 +110,5 @@ Notebooks communicate via widgets and task values (`tables_metadata`, `table_par
 ## Dashboard
 
 NeoBank_Dashboard provides executive KPIs (total customers, deposits, transactions, high-risk customers), monthly transaction trends, success vs. failure share, and per-page views for customer insights, branch performance, and gateway/device analysis.
+
+For conversational access to the same metrics, use the Genie agent [Banking Performance and Risk Analytics](#genie-01f1d1202f351646a7c90bc79d1982c3).
